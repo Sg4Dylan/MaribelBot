@@ -258,7 +258,7 @@ class FinalEventHandler(tornado.web.RequestHandler):
             pass
         try:
             if (u'group' in update['message']['chat']['type'] and
-                    u'@maribel_bot' in update['message']['text']) or \
+                    u'@MaribelBot' in update['message']['text']) or \
                     u'private' in update['message']['chat']['type']:
                 for function_name in [maribel_help, maribel_picture, maribel_null]:
                     user_job = Process(target=function_name, args=(update,))
