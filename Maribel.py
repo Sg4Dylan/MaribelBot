@@ -3,7 +3,6 @@
 import requests
 import json
 import os
-import shutil
 import random
 from multiprocessing import Process
 # import for Tornado WebHook
@@ -118,13 +117,13 @@ def maribel_picture(update: dict) -> bool:
         except IndexError:
             tag_list.append(' ')
         if is_yandere == 0:
-            source_url = "https://yande.re/post.json?limit=100&tags=" + tag_list[0]
+            source_url = "https://yande.re/post.json?limit=100&page=%s&tags=%s" % (str(random.randint(1, 10)),tag_list[0])
         elif is_yandere == 1:
-            source_url = "https://konachan.com/post.json?limit=100&tags=" + tag_list[0]
+            source_url = "https://konachan.com/post.json?limit=100&page=%s&tags=%s" % (str(random.randint(1, 10)),tag_list[0])
         elif is_yandere == 2:
-            source_url = "https://danbooru.donmai.us/posts.json?limit=100&tags=" + tag_list[0]
+            source_url = "https://danbooru.donmai.us/posts.json?limit=100&page=%s&tags=%s" % (str(random.randint(1, 10)),tag_list[0])
         else:
-            source_url = "http://behoimi.org/post/index.json?limit=100&tags=" + tag_list[0]
+            source_url = "http://behoimi.org/post/index.json?limit=100&page=%s&tags=%s" % (str(random.randint(1, 1000)),tag_list[0])
         headers = {
             'Accept-Encoding': 'gzip, deflate, sdch',
             'Accept-Language': 'en-US,en;q=0.8,zh-CN;q=0.6,zh;q=0.4',
@@ -139,7 +138,7 @@ def maribel_picture(update: dict) -> bool:
             maribel_send_message(update, True, "十分抱歉，您查找的_tag_并没有结果")
             maribel_send_sticker(update, 'BQADBQADtgEAAnVo_QMW7xR_mxZf8wI')
             return True
-        random_img_id = random.randint(1, 99)
+        random_img_id = random.randint(0, len(result_json)-1)
         if is_yandere == 0:
             caption_text = 'Yandere ID: '
         elif is_yandere == 1:
@@ -161,15 +160,16 @@ def maribel_picture(update: dict) -> bool:
         else:
             img_sample_url = result_json[random_img_id]["sample_url"]
             img_file_url = result_json[random_img_id]["file_url"]
-        download_img = requests.get(img_sample_url, headers=headers, stream=True)
+        download_img_name = str(result_json[random_img_id]["id"]) + '.jpg'
+        curl_command = "curl -o " + download_img_name + " -A 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2873.0 Safari/537.36' "
+        if is_yandere == 3:
+            curl_command = curl_command + "--referer " + "http://behoimi.org/post/show/" + str(result_json[random_img_id]["id"]) + " "
+        final_command = curl_command + img_sample_url
+        os.system(final_command)
         download_fail_flag = False
-        if download_img.headers['Content-Length'] == '42625':
+        if os.path.getsize(download_img_name) == 44020:
             download_fail_flag = True
             caption_text = 'Fail to download image\n' + caption_text
-        download_img_name = str(result_json[random_img_id]["id"]) + '.jpg'
-        with open(download_img_name, 'wb') as out_file:
-            shutil.copyfileobj(download_img.raw, out_file)
-        del download_img
         if not download_fail_flag:
             maribel_send_typing(update)
             bot.sendPhoto(
