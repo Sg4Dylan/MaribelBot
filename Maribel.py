@@ -116,14 +116,19 @@ def maribel_picture(update: dict) -> bool:
             tag_list.append(update['message']['text'].split(' ', 1)[1])
         except IndexError:
             tag_list.append(' ')
+        random_page_id = 1
+        if tag_list[0] == " ":
+            random_page_id = str(random.randint(1, 10))
+            if is_yandere == 3:
+                random_page_id = str(random.randint(1, 1000))
         if is_yandere == 0:
-            source_url = "https://yande.re/post.json?limit=100&page=%s&tags=%s" % (str(random.randint(1, 10)),tag_list[0])
+            source_url = "https://yande.re/post.json?limit=100&page=%s&tags=%s" % (random_page_id,tag_list[0])
         elif is_yandere == 1:
-            source_url = "https://konachan.com/post.json?limit=100&page=%s&tags=%s" % (str(random.randint(1, 10)),tag_list[0])
+            source_url = "https://konachan.com/post.json?limit=100&page=%s&tags=%s" % (random_page_id,tag_list[0])
         elif is_yandere == 2:
-            source_url = "https://danbooru.donmai.us/posts.json?limit=100&page=%s&tags=%s" % (str(random.randint(1, 10)),tag_list[0])
+            source_url = "https://danbooru.donmai.us/posts.json?limit=100&page=%s&tags=%s" % (random_page_id,tag_list[0])
         else:
-            source_url = "http://behoimi.org/post/index.json?limit=100&page=%s&tags=%s" % (str(random.randint(1, 1000)),tag_list[0])
+            source_url = "http://behoimi.org/post/index.json?limit=100&page=%s&tags=%s" % (random_page_id,tag_list[0])
         headers = {
             'Accept-Encoding': 'gzip, deflate, sdch',
             'Accept-Language': 'en-US,en;q=0.8,zh-CN;q=0.6,zh;q=0.4',
