@@ -3,7 +3,7 @@
 import plugins
 
 # Bot Name
-bot_name = "@MaribelBot"
+bot_id = "@MaribelBot"
 
 # CALL GLOBALLY
 global_trigger = [
