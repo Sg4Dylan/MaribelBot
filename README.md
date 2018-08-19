@@ -8,11 +8,12 @@ Yet another simple telegram bot which can return a random picture.
 
 依赖
 ------------
-* Python 3+
+* **Python 3.6+**
 * Tornado
 * requests
 * BeautifulSoup4
 * configparser
+* coloredlogs
 * nginx
 
 部署

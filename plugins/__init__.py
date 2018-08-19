@@ -1,6 +1,6 @@
 # PACKAGE
 from .theanimegallery import theanimegallery
-from .four_in_one import four_in_one
+from .five_in_one import five_in_one
 from .tags_recommand import tags_cloud
 from .help import help
 from .start import start

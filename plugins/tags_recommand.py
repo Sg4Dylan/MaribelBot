@@ -35,7 +35,7 @@ def tags_cloud(update: dict) -> bool:
     # 第二级选单
     def init_site_type():
         nonlocal site_type, site_api
-        if u'http' in update['message']['text']:
+        if u'http' in update['message'].get('text',''):
             return False
         for item in site_type_hint:
             if update['message'].get('text', '').startswith(item):
@@ -71,7 +71,7 @@ def tags_cloud(update: dict) -> bool:
             }]]
         }
         hint_text = "请选择Tag来源："
-        if "retake_menu_one" in update['message']['text']:
+        if "retake_menu_one" in update['message'].get('text',''):
             edit_inline_message(update, hint_text, button_dict)
         else:
             inline_raw_button(update, hint_text, button_dict)
@@ -79,7 +79,6 @@ def tags_cloud(update: dict) -> bool:
     # 第二级选单
     def send_keyboard_select_tag():
         button_dict = {'inline_keyboard': []}
-        print(type(tags_list))
         for i in range(4):
             line_list = []
             for j in range(4):
@@ -105,5 +104,5 @@ def tags_cloud(update: dict) -> bool:
         get_api_content()
         send_keyboard_select_tag()
     except Exception as e:
-        print("Global Error: %s" % e)
+        logger.error(f"Send Level 2 keyboard ERROR: {e}")
 

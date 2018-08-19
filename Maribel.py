@@ -13,11 +13,21 @@ from concurrent.futures import ThreadPoolExecutor
 from multiprocessing import Process
 # application lib
 import json
+import logging
+import coloredlogs
 # bot setting
 import config
 
+logger = logging.getLogger('Maribel')
+logger.propagate = False
+coloredlogs.install(level='DEBUG',
+                    fmt='%(asctime)s,%(msecs)03d %(name)s[%(process)d] %(levelname)s %(message)s',
+                    logger=logger)
+
 # Tornado define
+logging.getLogger('tornado.access').disabled = True
 define("port", default=8021, help="run on the given port", type=int)
+logger.critical('Maribel WebHook API Server started.')
 
 # Bot Web Hook event engine
 class FinalEventHandler(tornado.web.RequestHandler):
@@ -25,8 +35,11 @@ class FinalEventHandler(tornado.web.RequestHandler):
 
     @tornado.gen.coroutine
     def post(self):
-        # print(self.request.body.decode(encoding='UTF-8'))
+        # logger.debug(self.request.body.decode(encoding='UTF-8'))
         output_string = yield self.execute_job()
+        # detect type
+        if not isinstance(output_string, str):
+            output_string = 'ERROR'
         self.write(output_string)
         self.finish()
 
@@ -44,7 +57,7 @@ class FinalEventHandler(tornado.web.RequestHandler):
             # Trigger by message from group only
             try:
                 if (u'group' in update['message']['chat']['type'] and
-                        config.bot_name in update['message']['text']) or \
+                        config.bot_id in update['message']['text']) or \
                         u'private' in update['message']['chat']['type']:
                     # 
                     for function_name in config.group_trigger:
@@ -56,8 +69,7 @@ class FinalEventHandler(tornado.web.RequestHandler):
             jobs[-1].terminate()
             return return_string
         except OSError:
-            print("MemoryError")
-            return "ERROR"
+            logger.critical("EntryPointMemoryError")
 
 
 if __name__ == "__main__":

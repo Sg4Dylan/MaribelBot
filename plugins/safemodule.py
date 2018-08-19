@@ -1,4 +1,3 @@
-
 import os
 import configparser
 from tgfunc import *
@@ -15,7 +14,7 @@ def safemodule(update: dict) -> bool:
             config_ins['SafeModule']['using'] = "True"
             with open(config_file_path, 'w') as configfile:
                 config_ins.write(configfile)
-            print("[SafeModule] Auto generate config complished.")
+            logger.debug("[SafeModule] Auto generate config complished.")
     
     def auto_add_chat_id():
         config_ins = configparser.ConfigParser()
@@ -25,7 +24,7 @@ def safemodule(update: dict) -> bool:
             config_ins['SafeModule'][str(update['message']['chat']['id'])] = "False"
             with open(config_file_path, 'w') as configfile:
                 config_ins.write(configfile)
-            print("[SafeModule] Auto add chat id complished.")
+            logger.debug("[SafeModule] Auto add chat id complished.")
     
     def set_config(option):
         config_ins = configparser.ConfigParser()
@@ -75,6 +74,6 @@ def safemodule(update: dict) -> bool:
         if update['message'].get('text', '').startswith('/safemode'):
             change_switch()
     except Exception as e:
-       print("Error: %s" % e)
+       logger.error(f'Plugin Safe-Mode ERROR: {e}')
        return False
     return True

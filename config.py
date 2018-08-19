@@ -16,7 +16,7 @@ global_trigger = [
 # CALL IN GROUP WITH SURFIX OR CALL IN PRIVATE
 group_trigger = [
     plugins.help,
-    plugins.four_in_one,
+    plugins.five_in_one,
     plugins.theanimegallery,
     plugins.tags_cloud,
     plugins.null
