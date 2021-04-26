@@ -14,6 +14,7 @@ Yet another simple telegram bot which can return a random picture.
 * BeautifulSoup4
 * configparser
 * coloredlogs
+* Pillow
 * nginx
 
 部署

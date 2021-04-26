@@ -1,0 +1,5 @@
+tornado
+BeautifulSoup4
+requests
+pillow
+coloredlogs
