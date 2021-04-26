@@ -147,3 +147,101 @@ def check_if_administrator_or_master(update: dict) -> bool:
         return False
 
 
+def get_file_by_path(file_path: str):
+    file_url = f'https://api.telegram.org/file/bot{config.bot_token}/{file_path}'
+    return session.get(file_url).content
+
+
+def get_file_path(file_id: str):
+    j = json.loads(session.get(
+        config.api_url + 'getFile',
+        params=dict(file_id=file_id)).text)
+    if j['ok']:
+        return j['result'].get('file_path','')
+
+
+def send_document(update:dict, caption_msg: str, doc_file, file_name=None, file_mime=None, reply_id=None):
+    reply_to_id = update['message']['message_id']
+    if reply_id:
+        reply_to_id = reply_id
+    send_typing(update, "upload_document")
+    return session.post(
+        config.api_url + 'sendDocument',
+        files=dict(document=(file_name,
+                             doc_file,
+                             file_mime)),
+        data=dict(chat_id=update['message']['chat']['id'],
+                  caption=caption_msg,
+                  reply_to_message_id=reply_to_id))
+
+
+def get_sticker_set(set_name: str):
+    return json.loads(session.get(
+        config.api_url + 'getStickerSet',
+        params={'name': set_name}).text)
+
+
+def edit_message_text(message: dict,
+                        new_message: str,
+                        parse_mode: int=0, 
+                        disable_preview: str='true'):
+    data = {
+        'chat_id': message['result']['chat']['id'],
+        'message_id': message['result']['message_id'],
+        'text': new_message,
+        'disable_web_page_preview': disable_preview
+    }
+    if parse_mode == 1:
+        data['parse_mode'] = 'Markdown'
+    if parse_mode == 2:
+        data['parse_mode'] = 'HTML'
+    send_typing(update={'message': message['result']})
+    return json.loads(session.post(
+        config.api_url + 'editMessageText',
+        data=data).text)
+
+def chatid_empty_dict(chatid: str):
+    prepare_dict = {
+        'message': {
+            'chat': {
+                'id': chatid
+            },
+            'message_id': ''
+        }
+    }
+    return prepare_dict
+
+def error_upload(update: dict, module_name:str, error_type: str, error_info: str, error_trace:str):
+    error_msg = f'Error occurred\n=========\n'
+    error_msg += f'Module： `{module_name}`\n'
+    error_msg += f'Type： `{error_type}`\n'
+    error_msg += f'Info： \n`{error_info}`\n=========\n'
+    error_msg += f'Traceback： \n`{error_trace}`\n=========\n'
+    error_msg += f'Via： \n`{update}`\n'
+    logger.error(error_msg)
+    post_message(
+        chatid_empty_dict(str(config.admin_id)),
+        1,
+        error_msg
+    )
+
+def fix_duplicate(ini: str):
+    raw = open(ini,'rb').read().decode('UTF-8').split('\n')
+    new = f'{raw[0]}\n'
+    for i in range(1,len(raw)):
+        if not raw[i].split('=')[0].strip() in new:
+            new += f'{raw[i]}\n'
+        else:
+            print(f'{raw[i]}')
+    with open(ini,'wb') as wp:
+        wp.write(new.encode('UTF-8'))
+
+
+
+
+
+
+
+
+
+

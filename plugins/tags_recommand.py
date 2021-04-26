@@ -70,7 +70,7 @@ def tags_cloud(update: dict) -> bool:
                 'callback_data': "type_3dbooru"
             }]]
         }
-        hint_text = "请选择Tag来源："
+        hint_text = "请选择Tag来源 Please choose tag source: "
         if "retake_menu_one" in update['message'].get('text',''):
             edit_inline_message(update, hint_text, button_dict)
         else:
@@ -85,15 +85,15 @@ def tags_cloud(update: dict) -> bool:
                 element_dict = {}
                 element_dict['text'] = tags_list[i*4+j]
                 element_dict['callback_data'] = site_commands[site_type] + tags_list[i*4+j]
-                if i==3 and j== 3:
-                    element_dict['text'] = "换一波💦"
+                if i==3 and j==3:
+                    element_dict['text'] = "Reroll💦"
                     element_dict['callback_data'] = site_type
-                if i==3 and j== 0:
-                    element_dict['text'] = "🔙返回"
+                if i==3 and j==0:
+                    element_dict['text'] = "🔙 Back"
                     element_dict['callback_data'] = "/tagcloud#retake_menu_one"
                 line_list.append(element_dict)
             button_dict['inline_keyboard'].append(line_list)
-        hint_text = "请点击你需要获取的标签："
+        hint_text = "请点击你需要获取的标签 Click the label you need: "
         edit_inline_message(update, hint_text, button_dict)
 
     try:

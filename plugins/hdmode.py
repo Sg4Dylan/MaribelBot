@@ -1,5 +1,6 @@
 import os
 import configparser
+import traceback
 from tgfunc import *
 
 def hdmode(update: dict) -> bool:
@@ -32,7 +33,7 @@ def hdmode(update: dict) -> bool:
         config_ins['HD-Mode'][str(update['message']['chat']['id'])] = option
         with open(config_file_path, 'w') as configfile:
             config_ins.write(configfile)
-        result_msg = "开始使用原图显示" if option=="True" else "开始使用缩略图显示"
+        result_msg = "开始使用原图显示\nStart using the source image display" if option=="True" else "开始使用缩略图显示\nStart using the thumbnail display"
         send_message(update, False, result_msg)
     
     def show_status():
@@ -41,7 +42,10 @@ def hdmode(update: dict) -> bool:
         result = config_ins.getboolean('HD-Mode', str(update['message']['chat']['id']), fallback=False)
         status_result = "当前使用原图显示" if result else "当前使用缩略图显示"
         status_result += "\n当前模式可能会降低图片加载速度并增加移动网络流量消耗！" if result else ""
-        status_result += "\n群组管理员可以使用命令 `/hdmode [on/off]` 切换预览图设定."
+        status_result += "\n群组管理员可以使用命令 `/hdmode [on/off]` 切换预览图设定.\n"
+        status_result += "Now using the source image display" if result else "Now using the thumbnail display"
+        status_result += "\nCurrent mode may increase load time and mobile data consumption" if result else ""
+        status_result += "\nGroup admin can use the command `/hdmode [on/off]` to switch setting."
         send_message(update, True, status_result)
     
     def check_user():
@@ -54,7 +58,7 @@ def hdmode(update: dict) -> bool:
         msg_list = update['message'].get('text', '').split(' ', 1)
         if len(msg_list) == 2:
             if not check_user():
-                send_message(update, True, "当前操作需要您具备群组管理权限")
+                send_message(update, True, "当前操作需要您具备群组管理权限\n`Current operation requires you to have group admin rights`")
             if msg_list[1].upper() == "ON":
                 set_config("True")
             elif msg_list[1].upper() == "OFF":
@@ -74,6 +78,13 @@ def hdmode(update: dict) -> bool:
         if update['message'].get('text', '').startswith('/hdmode'):
             change_switch()
     except Exception as e:
-       logger.error(f'Plugin HD-Mode ERROR: {e}')
-       return False
+        logger.error(f'Plugin HD-Mode ERROR: {e}')
+        error_upload(
+            update,
+            'Plugin HD-Mode - ERROR',
+            f'{type(e)}',
+            'Call /hdmode error',
+            f'{traceback.format_exc()}'
+        )
+        return False
     return True

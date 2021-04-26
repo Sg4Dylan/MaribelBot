@@ -6,6 +6,7 @@ import requests
 import configparser
 import xml.etree.cElementTree as ET
 import subprocess
+import traceback
 from tgfunc import *
 
 headers = {
@@ -28,6 +29,8 @@ def five_in_one(update: dict) -> bool:
     source_url = ""
     # API 返回 RAW
     api_ret = ""
+    # API 返回状态码
+    api_status_code = 0
     # API 返回
     result_json = []
     xml_to_list = []
@@ -83,31 +86,36 @@ def five_in_one(update: dict) -> bool:
         except IndexError:
             tag_list.append(' ')
     
-    def init_api_url():
+    def init_api_url(no_page_id=False):
         nonlocal site_type, tag_list, source_url
         # 构造API URL
         random_page_id = 1
+        if tag_list[0] == " " and random_page_id != 2:
+            random_page_id = str(random.randint(1, 10))
+            if site_type == 3:
+                random_page_id = str(random.randint(1, 1000))
+        site_url_map = {
+            "0": "https://yande.re/post.json?limit=100&",
+            "1": "https://konachan.com/post.json?limit=100&",
+            "2": "https://danbooru.donmai.us/posts.json?limit=100&",
+            "3": "http://behoimi.org/post/index.json?limit=100&",
+            "4": "https://gelbooru.com/index.php?page=dapi&s=post&q=index&limit=100&"
+        }
+        # base url
+        source_url = site_url_map.get(f'{site_type}','')
+        if not source_url:
+            return False
+        # page id
         if tag_list[0] == " ":
             random_page_id = str(random.randint(1, 10))
             if site_type == 3:
                 random_page_id = str(random.randint(1, 1000))
-        if site_type == 0:
-            source_url = "https://yande.re/post.json?limit=100&page=%s&tags=%s" \
-                         % (random_page_id, tag_list[0])
-        elif site_type == 1:
-            source_url = "https://konachan.com/post.json?limit=100&page=%s&tags=%s" \
-                         % (random_page_id, tag_list[0])
-        elif site_type == 2:
-            source_url = "https://danbooru.donmai.us/posts.json?limit=100&page=%s&tags=%s" \
-                         % (random_page_id, tag_list[0])
-        elif site_type == 3:
-            source_url = "http://behoimi.org/post/index.json?limit=100&page=%s&tags=%s" \
-                         % (random_page_id, tag_list[0])
-        elif site_type == 4:
-            source_url = "https://gelbooru.com/index.php?page=dapi&s=post&q=index&limit=100&pid=%s&tags=%s" \
-                         % (random_page_id, tag_list[0])
-        else:
-            return False
+            if site_type == 4:
+                source_url += f"pid={random_page_id}&"
+            else:
+                source_url += f"page={random_page_id}&"
+        # tags
+        source_url += f"tags={tag_list[0]}"
         return True
     
     def screen_type_init():
@@ -120,32 +128,52 @@ def five_in_one(update: dict) -> bool:
             pass
     
     def call_api():
-        nonlocal site_type, source_url, result_json, xml_to_list, api_ret
+        nonlocal site_type, source_url, result_json, xml_to_list, api_ret, api_status_code
         try:
+            raw_call = requests.get(source_url, headers=headers)
+            api_ret = raw_call.content.decode(encoding='UTF-8')
+            api_status_code = raw_call.status_code
             if site_type != 4:
-                api_ret = requests.get(source_url, headers=headers).content.decode(encoding='UTF-8')
                 result_json = json.loads(api_ret)
             else:
-                api_ret = requests.get(source_url, headers=headers).content.decode(encoding='UTF-8')
                 xml_fetch_root = ET.fromstring(api_ret)
                 for child in xml_fetch_root:
                     xml_to_list.append(child.attrib)
+        except OSError:
+            logger.critical("CallbackMemoryError")
+        except BrokenPipeError:
+            logger.critical("CallbackPipeError")
         except Exception as e:
-            logger.error(f'Call IMG API ERROR: {e}')
+            error_upload(
+                update,
+                'Plugin 5in1 - Call API',
+                f'{type(e)}',
+                f'Call IMG API ERROR: {source_url}',
+                f'{traceback.format_exc()}'
+            )
     
     def check_api_result():
         # 探测抓取结果
-        nonlocal result_json, xml_to_list, site_type
+        nonlocal result_json, xml_to_list, site_type, api_ret, api_status_code
+        if str(api_status_code).startswith('50'):
+            send_message(update, True, f"源站故障，状态码: `{api_status_code}`")
+            return False
         if str(result_json) == "[]" and site_type != 4:
-            send_message(update, True, "十分抱歉，您查找的_tag_并没有结果")
+            tip_text = "十分抱歉，您查找的_tag_并没有结果\n" \
+                       "`Sorry, The TAG you are looking for has no result`"
+            send_message(update, True, tip_text)
             send_sticker(update, 'BQADBQADtgEAAnVo_QMW7xR_mxZf8wI')
             return False
         if not xml_to_list and site_type == 4:
             if "API disabled" in api_ret:
-                send_message(update, True, "因遭到滥用，目标站点已关闭搜索 API，恢复时间未知")
+                tip_text = "因遭到滥用，目标站点已关闭搜索 API，恢复时间未知\n" \
+                           "`Due to abuse, the source site has closed the search API and the recovery time is unknown.`"
+                send_message(update, True, tip_text)
                 send_sticker(update, 'CAADBQAD2AAD7zZ-AhmElS0mPhgeAg')
             else:
-                send_message(update, True, "十分抱歉，您查找的_tag_并没有结果")
+                tip_text = "十分抱歉，您查找的_tag_并没有结果\n" \
+                           "`Sorry, The TAG you are looking for has no result`"
+                send_message(update, True, tip_text)
                 send_sticker(update, 'BQADBQADtgEAAnVo_QMW7xR_mxZf8wI')
             return False
         return True
@@ -161,7 +189,9 @@ def five_in_one(update: dict) -> bool:
             if screen_type_check(item):
                 st_result.append(item)
         if not st_result:
-            send_message(update, True, "十分抱歉，您请求的排版类型并没有结果")
+            tip_text = "十分抱歉，您请求的排版类型并没有结果\n" \
+                       "`Sorry, there's no result for this direction`"
+            send_message(update, True, tip_text)
             return False
         # 过滤 safe mode
         logger.debug("[SafeModule] start safe filter.")
@@ -169,8 +199,25 @@ def five_in_one(update: dict) -> bool:
             if safe_module_filter(item):
                 sm_result.append(item)
         if not sm_result:
-            send_message(update, True, "出于当前安全设定考虑，您请求内容已被阻止")
+            tip_text = "出于当前安全设定考虑，您请求内容已被阻止\n" \
+                       "`Your request has been blocked by settings`"
+            send_message(update, True, tip_text)
             return False
+        # 过滤 danbooru 无效数据
+        logger.debug("[DanbooruFilter] start danbooru filter.")
+        if site_type == 2:
+            for i in sorted(list(range(len(sm_result))), reverse=True):
+                sample_url = sm_result[i].get('file_url','')
+                file_url = sm_result[i].get('large_file_url','')
+                if sample_url == '' or file_url == '':
+                    del sm_result[i]
+            if not sm_result:
+                tip_text = "十分抱歉，您查找的_tag_并没有结果\n" \
+                           "`Sorry, The TAG you are looking for has no result`"
+                send_message(update, True, tip_text)
+                send_sticker(update, 'BQADBQADtgEAAnVo_QMW7xR_mxZf8wI')
+                return False
+        # 传递结果
         if site_type == 4:
             xml_to_list = sm_result
         else:
@@ -212,8 +259,12 @@ def five_in_one(update: dict) -> bool:
         
         def safe_status():
             config_ins = configparser.ConfigParser()
-            config_ins.read(config_file_path)
-            return config_ins.getboolean('SafeModule', str(update['message']['chat']['id']), fallback=False)
+            while True:
+                try:
+                    config_ins.read(config_file_path)
+                    return config_ins.getboolean('SafeModule', str(update['message']['chat']['id']), fallback=False)
+                except configparser.DuplicateOptionError:
+                    fix_duplicate(config_file_path)
         
         if not safe_status():
             return True
@@ -223,8 +274,10 @@ def five_in_one(update: dict) -> bool:
             return False
     
     def prepare_random_id():
+        
         # 准备随机数
         nonlocal site_type, random_img_id, xml_to_list, result_json
+        
         if not filter_result():
             return False
         if site_type == 4:
@@ -257,13 +310,17 @@ def five_in_one(update: dict) -> bool:
         
         def hd_status():
             config_ins = configparser.ConfigParser()
-            config_ins.read(hd_mode_config)
-            return config_ins.getboolean('HD-Mode', str(update['message']['chat']['id']), fallback=False)
+            while True:
+                try:
+                    config_ins.read(hd_mode_config)
+                    return config_ins.getboolean('HD-Mode', str(update['message']['chat']['id']), fallback=False)
+                except configparser.DuplicateOptionError:
+                    fix_duplicate(hd_mode_config)
         
         # 设定图片链接
         if site_type == 2:
-            img_sample_url =result_json[random_img_id].get('file_url','')
-            img_file_url = result_json[random_img_id]["large_file_url"]
+            img_sample_url = result_json[random_img_id].get('file_url','')
+            img_file_url = result_json[random_img_id].get('large_file_url','')
             if not 'https://danbooru.donmai.us' in img_sample_url:
                 img_sample_url = "https://danbooru.donmai.us" + img_sample_url
             if not 'https://danbooru.donmai.us' in img_file_url:
@@ -335,7 +392,7 @@ def five_in_one(update: dict) -> bool:
             except OSError:
                 logger.critical("CurlExecMemoryError")
             except Exception as e:
-                logger.error(f"CurlError:{e}")
+                nano_msg = f'{e}'
                 success_flag = False
             return success_flag, nano_msg
         
@@ -356,6 +413,13 @@ def five_in_one(update: dict) -> bool:
             s_flag, err_msg = exec_cmd(final_command)
             if s_flag:
                 return
+        error_upload(
+            update,
+            'Plugin 5in1 - CURL',
+            f'{err_msg}',
+            f'CMD: {final_command}',
+            'None'
+        )
     
     # 检查下载结果
     def check_download_result():
@@ -372,25 +436,27 @@ def five_in_one(update: dict) -> bool:
         else:
             img_size = str(round(result_json[random_img_id]["file_size"] / 1024, 2))
     
+    # 移除临时文件
+    def remove_temp_file():
+        nonlocal download_img_name
+        try:
+            os.remove(download_img_name)
+        except:
+            logger.debug("File might not exist.")
+    
     # 发送图片
     def send_img_result():
         nonlocal caption_text, img_id, download_img_name, img_size, img_sample_url, img_file_url, download_url, retry_send_flag
         logger.debug("[Debug: file info] %s / %s" % (download_img_name,img_size))
-        # 移除临时文件
-        def remove_temp_file():
-            try:
-                os.remove(download_img_name)
-            except:
-                logger.debug("File might not exist.")
         
         # 发送图片 + 发送按钮
         logger.debug("[Image send Function] Ready to send photo")
         button_dict = {
             'inline_keyboard': [[{
-                'text': "查看原图",
+                'text': "查看原图 View source",
                 'url': img_file_url,
             },{
-                'text': "再来一张",
+                'text': "再来一张 Once again",
                 'callback_data': update['message'].get('text','')
             }]],
         }
@@ -432,10 +498,14 @@ def five_in_one(update: dict) -> bool:
                     return True
                 else:
                     logger.debug("[Debug: fail] %s" % img_file_url)
-                    send_message(update, True, "图片发送过程出现故障")
+                    error_text = "图片发送过程出现故障\n" \
+                               "`Picture sending process has failed`"
+                    send_message(update, True, error_text)
         else:
             logger.debug("[Debug: fail] %s" % img_file_url)
-            send_message(update, True, "图片下载过程出现故障")
+            error_text = "图片下载过程出现故障\n" \
+                       "`Picture downloading process has failed`"
+            send_message(update, True, error_text)
         # 清除图片临时文件
         remove_temp_file()
         return True
@@ -466,5 +536,11 @@ def five_in_one(update: dict) -> bool:
         error_info = f'SiteType: `{site_type}`\n'
         error_info += f'ImageID: `{img_id}`\n'
         error_info += f'DownloadURL: `{download_url}`'
-        logger.error(error_info)
+        error_upload(
+            update,
+            'Plugin 5in1',
+            f'{type(e)}',
+            error_info,
+            f'{traceback.format_exc()}'
+        )
         remove_temp_file()
