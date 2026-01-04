@@ -1,0 +1,8 @@
+bot:
+  token: "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
+  proxy: "" # http://127.0.0.1:1080
+  admin_id: 123456789 # 用于管理 HD/Safe 模式的主控 ID
+
+files:
+  hd_mode_ini: "./db/hdmode.ini"
+  safe_mode_ini: "./db/safemode.ini"

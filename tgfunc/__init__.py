@@ -1,2 +1,0 @@
-# LIBBOT
-from .tgfunc import *
